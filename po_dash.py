@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 
 # Import only the main function from your processing module
-from processing import get_final_po_data
+from processing import get_final_po_data, format_df_for_display
 
 # --- Page Configuration ---
 st.set_page_config(page_title="PO Dashboard", layout="wide")
@@ -46,7 +46,7 @@ def convert_df_to_csv(df):
     return df.to_csv(index=False).encode('utf-8')
 
 
-# --- Main Application Logic ---
+## --- Main Application Logic ---
 final_data_df = load_data()
 
 if final_data_df is not None:
@@ -56,23 +56,18 @@ if final_data_df is not None:
         # --- Sidebar Filtering Logic ---
         st.sidebar.header("Filter Data")
         
-        # Filter by Platform
         platforms = sorted(final_data_df['Platform'].dropna().unique())
         selected_platform = st.sidebar.multiselect("Platform", platforms, default=[])
 
-        # Filter by City
         cities = sorted(final_data_df['City'].dropna().unique())
         selected_city = st.sidebar.multiselect("City", cities, default=[])
 
-        # Filter by SKU
         products = sorted(final_data_df['SKU'].dropna().unique())
         selected_product = st.sidebar.multiselect("SKU", products, default=[])     
 
         st.sidebar.markdown("---")
         
-        # ✨ NEW: Radio buttons to select the date column for filtering ✨
         date_column_options = ['Date', 'DISPATCH DATE', 'APPOINTMENT DATE']
-        # Filter out options that don't exist in the dataframe
         available_date_columns = [col for col in date_column_options if col in final_data_df.columns and not final_data_df[col].isnull().all()]
         
         if available_date_columns:
@@ -82,7 +77,6 @@ if final_data_df is not None:
                 key='date_column_selection'
             )
 
-            # ✨ NEW: Dynamic Date Range Filter based on radio selection ✨
             min_date = final_data_df[selected_date_column].min().date()
             max_date = final_data_df[selected_date_column].max().date()
 
@@ -101,7 +95,6 @@ if final_data_df is not None:
         # --- Apply Filters ---
         filtered_df = final_data_df.copy()
 
-        # Apply date filter if a column and range are selected
         if selected_date_column and len(selected_date_range) == 2:
             start_date, end_date = selected_date_range
             filtered_df = filtered_df[
@@ -109,7 +102,6 @@ if final_data_df is not None:
                 (filtered_df[selected_date_column].dt.date <= end_date)
             ]
 
-        # Apply multiselect filters
         if selected_platform:
             filtered_df = filtered_df[filtered_df['Platform'].isin(selected_platform)]
         if selected_city:
@@ -136,7 +128,8 @@ if final_data_df is not None:
             col3_open.metric("Total Open Value", "₹ N/A", help="PO value cannot be calculated without SKU price data.")
     
             with st.expander("View Details of Open Purchase Orders"):
-                st.dataframe(open_pos_df)
+                # ✨ CHANGED: Use the formatting function before displaying ✨
+                st.dataframe(format_df_for_display(open_pos_df))
                 
                 csv_open_pos = convert_df_to_csv(open_pos_df)
                 st.download_button(
@@ -164,7 +157,8 @@ if final_data_df is not None:
             key='download-filtered-data'
         )
 
-        st.dataframe(filtered_df)
+        # ✨ CHANGED: Use the formatting function before displaying ✨
+        st.dataframe(format_df_for_display(filtered_df))
 
     else:
         st.warning("The loaded data is empty after processing. Please check your data sources.")

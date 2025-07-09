@@ -173,7 +173,7 @@ def _process_main_po_data() -> pd.DataFrame:
 
             if 'Item Code' in df_melted.columns:
                 df_melted.rename(columns={'Item Code': 'SKU Code'}, inplace=True)
-            final_df = df_melted[['SKU Code', 'SKU', 'Grammage', 'Cases', 'City', 'Platform', 'Date', 'PO Number', 'Quantity']].copy()
+            final_df = df_melted[['SKU Code', 'SKU', 'City', 'Platform', 'Date', 'PO Number', 'Quantity']].copy()
             final_df.dropna(subset=['SKU Code', 'City', 'Platform', 'Date', 'PO Number'], inplace=True)
             final_df['PO Number'] = final_df['PO Number'].astype(str).str.strip()
 
@@ -254,3 +254,13 @@ def get_final_po_data() -> pd.DataFrame:
     
     print("✅ Data processing complete.")
     return merged_df
+
+def format_df_for_display(df):
+    """
+    Creates a copy of the dataframe and formats date columns to 'YYYY-MM-DD' strings for clean display.
+    """
+    df_display = df.copy()
+    for col in ['Date', 'DISPATCH DATE', 'APPOINTMENT DATE']:
+        if col in df_display.columns and pd.api.types.is_datetime64_any_dtype(df_display[col]):
+            df_display[col] = df_display[col].dt.strftime('%Y-%m-%d')
+    return df_display
