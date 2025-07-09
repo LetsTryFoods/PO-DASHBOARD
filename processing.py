@@ -211,13 +211,13 @@ def _fetch_and_clean_po_details() -> pd.DataFrame:
     if 'PO Number' not in df_details.columns:
         raise ValueError("Critical Error: 'PO Number' column is missing in the PO Details file.")
 
-    columns_to_keep = ['PO Number', 'PO DATE', 'DISPATCH DATE', 'APPOINTMENT DATE', 'LEAD TIME','PO VALUE', 'PO INVOICE']
+    columns_to_keep = ['PO Number', 'DISPATCH DATE', 'APPOINTMENT DATE', 'LEAD TIME','PO VALUE', 'PO INVOICE']
     existing_columns_to_keep = [col for col in columns_to_keep if col in df_details.columns]
     
     df_cleaned = df_details[existing_columns_to_keep].copy()
     
     #   Convert date columns to datetime objects 
-    for date_col in ['PO DATE', 'DISPATCH DATE', 'APPOINTMENT DATE']:
+    for date_col in ['DISPATCH DATE', 'APPOINTMENT DATE']:
         if date_col in df_cleaned.columns:
             df_cleaned[date_col] = pd.to_datetime(df_cleaned[date_col], errors='coerce')
 

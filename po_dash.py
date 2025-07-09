@@ -23,11 +23,11 @@ def load_data():
     This allows us to cache the results and handle errors gracefully in the UI.
     """
     try:
-        # Assuming get_final_po_data is defined elsewhere and returns a DataFrame
         df = get_final_po_data()
-        # Ensure 'APPOINTMENT DATE' is datetime
-        if 'APPOINTMENT DATE' in df.columns:
-            df['APPOINTMENT DATE'] = pd.to_datetime(df['APPOINTMENT DATE'])
+        # Ensure all potential date columns are converted to datetime
+        for col in ['Date', 'DISPATCH DATE', 'APPOINTMENT DATE']:
+             if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
         return df
     except (ValueError, ConnectionError) as e:
         st.error(f"An error occurred during data processing: {e}")
@@ -42,7 +42,6 @@ def load_data():
 def convert_df_to_csv(df):
     """
     Converts a DataFrame to a CSV string, which is essential for the download button.
-    The output is encoded to UTF-8.
     """
     return df.to_csv(index=False).encode('utf-8')
 
@@ -53,6 +52,70 @@ final_data_df = load_data()
 if final_data_df is not None:
     if not final_data_df.empty:
         st.success("Data loaded and processed successfully!")
+        
+        # --- Sidebar Filtering Logic ---
+        st.sidebar.header("Filter Data")
+        
+        # Filter by Platform
+        platforms = sorted(final_data_df['Platform'].dropna().unique())
+        selected_platform = st.sidebar.multiselect("Platform", platforms, default=[])
+
+        # Filter by City
+        cities = sorted(final_data_df['City'].dropna().unique())
+        selected_city = st.sidebar.multiselect("City", cities, default=[])
+
+        # Filter by SKU
+        products = sorted(final_data_df['SKU'].dropna().unique())
+        selected_product = st.sidebar.multiselect("SKU", products, default=[])     
+
+        st.sidebar.markdown("---")
+        
+        # ✨ NEW: Radio buttons to select the date column for filtering ✨
+        date_column_options = ['Date', 'DISPATCH DATE', 'APPOINTMENT DATE']
+        # Filter out options that don't exist in the dataframe
+        available_date_columns = [col for col in date_column_options if col in final_data_df.columns and not final_data_df[col].isnull().all()]
+        
+        if available_date_columns:
+            selected_date_column = st.sidebar.radio(
+                "Choose a date column to filter by:",
+                available_date_columns,
+                key='date_column_selection'
+            )
+
+            # ✨ NEW: Dynamic Date Range Filter based on radio selection ✨
+            min_date = final_data_df[selected_date_column].min().date()
+            max_date = final_data_df[selected_date_column].max().date()
+
+            selected_date_range = st.sidebar.date_input(
+                f"Filter by {selected_date_column}",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date,
+                key='date_range_selector'
+            )
+        else:
+            st.sidebar.warning("No valid date columns found for filtering.")
+            selected_date_column = None
+            selected_date_range = ()
+
+        # --- Apply Filters ---
+        filtered_df = final_data_df.copy()
+
+        # Apply date filter if a column and range are selected
+        if selected_date_column and len(selected_date_range) == 2:
+            start_date, end_date = selected_date_range
+            filtered_df = filtered_df[
+                (filtered_df[selected_date_column].dt.date >= start_date) &
+                (filtered_df[selected_date_column].dt.date <= end_date)
+            ]
+
+        # Apply multiselect filters
+        if selected_platform:
+            filtered_df = filtered_df[filtered_df['Platform'].isin(selected_platform)]
+        if selected_city:
+            filtered_df = filtered_df[filtered_df['City'].isin(selected_city)]
+        if selected_product:
+            filtered_df = filtered_df[filtered_df['SKU'].isin(selected_product)]
         
         # --- Open POs Section ---
         st.header("Open POs Summary")
@@ -84,68 +147,24 @@ if final_data_df is not None:
                     key='download-open-pos'
                 )
         else:
-            st.warning("Could not find 'APPOINTMENT DATE' data or it's not in a date format to calculate Open POs.")
+            st.warning("Could not find 'APPOINTMENT DATE' data to calculate Open POs.")
     
         st.markdown("---")
 
         # --- Display Data Table ---
-        st.header("Consolidated Purchase Order Data")
-        
-        csv_all_data = convert_df_to_csv(final_data_df)
+        st.header("Consolidated & Filtered Purchase Order Data")
+        st.write(f"Displaying {len(filtered_df)} rows based on your filters.")
+
+        csv_filtered_data = convert_df_to_csv(filtered_df)
         st.download_button(
-             label="Download All Data as CSV",
-             data=csv_all_data,
-             file_name='consolidated_purchase_orders.csv',
-             mime='text/csv',
-             key='download-all-data'
+            label="Download Filtered Data as CSV",
+            data=csv_filtered_data,
+            file_name='filtered_purchase_orders.csv',
+            mime='text/csv',
+            key='download-filtered-data'
         )
-        
-        st.dataframe(final_data_df)
 
-        # --- Sidebar Filtering Logic ---
-        st.sidebar.header("Filter Data")
-        
-        # Filter by Platform
-        platforms = sorted(final_data_df['Platform'].dropna().unique())
-        selected_platform = st.sidebar.multiselect("Platform", platforms, default=[])
-
-        # Filter by City
-        cities = sorted(final_data_df['City'].dropna().unique())
-        selected_city = st.sidebar.multiselect("City", cities, default=[])
-
-        # ✨ NEW: Filter by SKU
-        products = sorted(final_data_df['SKU'].dropna().unique())
-        print(products)
-        selected_product = st.sidebar.multiselect("SKU", products, default=[])     
-
-        # --- Filtered View Logic ---
-        # Start with a copy of the original dataframe
-        filtered_df = final_data_df.copy()
-
-        # Apply filters only if a selection has been made in the corresponding multiselect
-        if selected_platform:
-            filtered_df = filtered_df[filtered_df['Platform'].isin(selected_platform)]
-        if selected_city:
-            filtered_df = filtered_df[filtered_df['City'].isin(selected_city)]
-        if selected_product:
-            filtered_df = filtered_df[filtered_df['SKU'].isin(selected_product)]
-        
-        # ✨ NEW: Display the filtered view only if at least one filter is active
-        if selected_platform or selected_city or selected_product:
-            st.markdown("---")
-            st.header("Filtered View")
-            st.write(f"Showing {len(filtered_df)} rows based on your selection.")
-
-            csv_filtered_data = convert_df_to_csv(filtered_df)
-            st.download_button(
-                label="Download Filtered Data as CSV",
-                data=csv_filtered_data,
-                file_name='filtered_purchase_orders.csv',
-                mime='text/csv',
-                key='download-filtered-data'
-            )
-
-            st.dataframe(filtered_df)
+        st.dataframe(filtered_df)
 
     else:
         st.warning("The loaded data is empty after processing. Please check your data sources.")
