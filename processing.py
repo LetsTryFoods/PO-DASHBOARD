@@ -206,12 +206,12 @@ def _fetch_and_clean_po_details() -> pd.DataFrame:
     except Exception as e:
         raise ConnectionError(f"Could not load PO Details from Google Sheets: {e}")
 
-    df_details.rename(columns={'PO No.': 'PO Number', 'PO Value':'PO VALUE', 'Qty Delivered': 'QUANTITY DELIVERED'}, inplace=True, errors='ignore')
+    df_details.rename(columns={'PO NO.': 'PO NUMBER', 'PO VALUE':'PO VALUE', 'DELIVERED QTY': 'QUANTITY DELIVERED'}, inplace=True, errors='ignore')
 
-    if 'PO Number' not in df_details.columns:
-        raise ValueError("Critical Error: 'PO Number' column is missing in the PO Details file.")
+    if 'PO NUMBER' not in df_details.columns:
+        raise ValueError("Critical Error: 'PO NUMBER' column is missing in the PO Details file.")
 
-    columns_to_keep = ['PO Number','QUANTITY DELIVERED','DISPATCH DATE', 'APPOINTMENT DATE', 'LEAD TIME','PO VALUE', 'PO INVOICE']
+    columns_to_keep = ['PO NUMBER','QUANTITY DELIVERED','DISPATCH DATE', 'APPOINTMENT DATE', 'LEAD TIME','PO VALUE', 'PO INVOICE']
     existing_columns_to_keep = [col for col in columns_to_keep if col in df_details.columns]
     
     df_cleaned = df_details[existing_columns_to_keep].copy()
@@ -221,9 +221,9 @@ def _fetch_and_clean_po_details() -> pd.DataFrame:
         if date_col in df_cleaned.columns:
             df_cleaned[date_col] = pd.to_datetime(df_cleaned[date_col], errors='coerce')
 
-    df_cleaned['PO Number'] = df_cleaned['PO Number'].astype(str).str.strip()
-    df_cleaned.drop_duplicates(subset=['PO Number'], inplace=True)
-    
+    df_cleaned['PO NUMBER'] = df_cleaned['PO NUMBER'].astype(str).str.strip()
+    df_cleaned.drop_duplicates(subset=['PO NUMBER'], inplace=True)
+
     return df_cleaned
 
 
