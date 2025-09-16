@@ -211,7 +211,7 @@ def _fetch_and_clean_po_details() -> pd.DataFrame:
     if 'PO NUMBER' not in df_details.columns:
         raise ValueError("Critical Error: 'PO NUMBER' column is missing in the PO Details file.")
 
-    columns_to_keep = ['PO NUMBER','QUANTITY DELIVERED','DISPATCH DATE', 'APPOINTMENT DATE', 'LEAD TIME','PO VALUE', 'PO INVOICE']
+    columns_to_keep = ['PO NUMBER','QUANTITY DELIVERED','DISPATCH DATE', 'APPOINTMENT DATE', 'ACTUAL TAT','PO VALUE', 'INVOICE QTY']
     existing_columns_to_keep = [col for col in columns_to_keep if col in df_details.columns]
     
     df_cleaned = df_details[existing_columns_to_keep].copy()
