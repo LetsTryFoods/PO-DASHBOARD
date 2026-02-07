@@ -38,7 +38,6 @@ def load_data():
         return None
 
 # --- Caching function to convert DataFrame to CSV ---
-@st.cache_data
 def convert_df_to_csv(df):
     """
     Converts a DataFrame to a CSV string, which is essential for the download button.
